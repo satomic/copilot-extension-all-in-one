@@ -52,7 +52,8 @@ def stream():
             prefix_map = {
                 "cmd:": action.execute_command,
                 "ollama:": action.ollama,
-                "qwen:": action.qwen
+                "qwen:": action.qwen,
+                "deepseek:": action.deepseek
             }
             
             for prefix, handler in prefix_map.items():
@@ -60,7 +61,10 @@ def stream():
                     action_name = prefix[:-1]
                     message = content[len(prefix):].strip()
                     if prefix != "cmd:":
-                        message = f"{message}\n\nreferences_selection content:{references_selection}\n\nreferences_file content:{references_file}"
+                        if references_selection:
+                            message = f"{message}\n\nreferences_selection content:{references_selection}"
+                        if references_file:
+                            message = f"{message}\n\nreferences_file content:{references_file}"
                     payload["messages"][-1]["content"] = message
                     logger.info(f"{action_name}: {payload['messages'][-1]['content']}")
                     return handler(payload["messages"]), {"Content-Type": "text/event-stream"}

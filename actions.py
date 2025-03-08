@@ -199,3 +199,82 @@ class Actions():
             yield self._format_response(error_msg, is_error=True)
             yield self._format_stop_response()
 
+    # DeepSeek API implementation
+    # https://api-docs.deepseek.com/
+    def deepseek(self, messages):
+        self.messages = messages
+        headers = {
+            "Authorization": f"Bearer {config.DEEPSEEK_API_KEY}",
+            "Content-Type": "application/json",
+        }
+        data = {
+            "model": config.DEEPSEEK_MODEL,
+            "messages": self.messages, 
+            "stream": True
+        }
+        try:
+            with httpx.stream(
+                "POST",
+                config.DEEPSEEK_API_URL,
+                headers=headers,
+                json=data,
+                timeout=120.0,  # Increasing timeout to avoid timeout issues
+            ) as response:
+                if response.status_code == 401:
+                    error_msg = "DeepSeek API request failed: Unauthorized 401, please check whether API_KEY is valid."
+                    yield self._format_response(error_msg, is_error=True)
+                    yield self._format_stop_response()
+                    return
+
+                response.raise_for_status()
+
+                for chunk in response.iter_lines():
+                    if chunk:
+                        # Process chunk as string (no need to decode)
+                        chunk_str = chunk
+                        
+                        if chunk_str == "data: [DONE]":
+                            # End of stream marker, no action needed as we're already yielding stop response
+                            continue
+                        
+                        # Remove the 'data: ' prefix if present
+                        if chunk_str.startswith("data: "):
+                            chunk_str = chunk_str[6:]
+                        
+                        try:
+                            # Parse the JSON chunk
+                            json_chunk = json.loads(chunk_str)
+                            
+                            # Extract content from the choices array
+                            if "choices" in json_chunk and len(json_chunk["choices"]) > 0:
+                                choice = json_chunk["choices"][0]
+                                
+                                # Check for finish reason
+                                if choice.get("finish_reason") == "stop":
+                                    yield self._format_stop_response()
+                                    continue
+                                
+                                # Extract content from delta
+                                if "delta" in choice and "content" in choice["delta"]:
+                                    content = choice["delta"]["content"]
+                                    
+                                    # Format in OpenAI compatible format
+                                    data_dict = {
+                                        "choices": [{
+                                            "delta": {"content": content},
+                                            "index": 0
+                                        }]
+                                    }
+                                    
+                                    # Convert to JSON and yield in SSE format
+                                    yield f"data: {json.dumps(data_dict)}\n\n"
+                        except json.JSONDecodeError as e:
+                            # In case of malformed JSON
+                            print(f"JSON decoding error: {e}, chunk: {chunk_str}")
+                            continue
+
+        except httpx.HTTPError as e:
+            error_msg = f"DeepSeek API request exception: {str(e)}"
+            yield self._format_response(error_msg, is_error=True)
+            yield self._format_stop_response()
+
