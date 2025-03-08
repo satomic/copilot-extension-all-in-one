@@ -37,7 +37,7 @@ This extension supports the following key features:
 3. Start the service:
 
     ```bash
-    uvicorn app:app --reload
+    uvicorn main:app --reload
     ```
 
 ## Usage
@@ -120,5 +120,5 @@ All models support streaming responses, allowing you to see AI-generated content
 
 ## Extension Development
 
-To add new AI model integrations, add new handler methods in `actions.py` and register new prefixes in the `prefix_map` in `app.py`.
+To add new AI model integrations, add new handler methods in `actions.py` and register new prefixes in the `prefix_map` in `main.py`.
 
