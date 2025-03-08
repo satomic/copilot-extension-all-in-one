@@ -4,18 +4,19 @@ import subprocess
 import config
 
 
-class Models():
+class Actions():
 
-    def __init__(self, x_github_token, payload):
+    def __init__(self, x_github_token):
         self.x_github_token = x_github_token
-        self.messages = payload["messages"]
+        self.messages = []
 
-    def copilot(self):
+    def copilot(self, messages):
+        self.messages = messages
         self.messages.insert(
             0,
             {
                 "role": "system",
-                "content": "你是一个可爱的小猫🐱喜欢卖萌，每次回答都用emoji结为，例如💗",
+                "content": config.COPILOT_PERSONALIZATION,
             },
         )
         headers = {
@@ -28,7 +29,7 @@ class Models():
         }
         with httpx.stream(
             "POST",
-            "https://api.githubcopilot.com/chat/completions",
+            config.COPILOT_API_URL,
             headers=headers,
             json=data,
         ) as response:
@@ -36,15 +37,16 @@ class Models():
                 if chunk:
                     yield f"{chunk}\n\n"
 
-    def ollama(self):
+    def ollama(self, messages):
+        self.messages = messages
         data = {
-            "model": "llama3.2",
+            "model": config.OLLAMA_MODEL,
             "messages": self.messages, 
             "stream": True
         }
         with httpx.stream(
             "POST",
-            "http://localhost:11434/api/chat",
+            config.OLLAMA_API_URL,
             json=data,
             timeout=120.0,
         ) as response:
@@ -82,7 +84,8 @@ class Models():
                         # In case of malformed JSON
                         continue
 
-    def execute_command(self):
+    def execute_command(self, messages):
+        self.messages = messages
         # Get the last prompt from messages list
         if not self.messages or len(self.messages) == 0:
             error_msg = "No messages found."
@@ -104,7 +107,7 @@ class Models():
         try:
             # Execute the command through cmd.exe
             process = subprocess.Popen(
-                ["cmd.exe", "/c", command],
+                [config.CMD_EXECUTOR, command] if config.CMD_EXECUTOR != 'cmd.exe' else [config.CMD_EXECUTOR, '/c', command],
                 stdout=subprocess.PIPE,
                 stderr=subprocess.PIPE,
                 text=True,
@@ -161,23 +164,38 @@ class Models():
         return f"data: {json.dumps(data_dict)}\n\n"
 
     # https://help.aliyun.com/zh/model-studio/developer-reference/use-qwen-by-calling-api#d059267ec7867
-    def qwen(self):
+    def qwen(self, messages):
+        self.messages = messages
         headers = {
             "Authorization": f"Bearer {config.QWEN_API_KEY}",
             "Content-Type": "application/json",
         }
         data = {
-            "model": "qwen-plus",
+            "model": config.QWEN_MODEL,
             "messages": self.messages, 
             "stream": True
         }
-        with httpx.stream(
-            "POST",
-            "https://dashscope.aliyuncs.com/compatible-mode/v1/chat/completions",
-            headers=headers,
-            json=data,
-        ) as response:
-            for chunk in response.iter_lines():
-                if chunk:
-                    yield f"{chunk}\n\n"
+        try:
+            with httpx.stream(
+                "POST",
+                config.QWEN_API_URL,
+                headers=headers,
+                json=data,
+            ) as response:
+                if response.status_code == 401:
+                    error_msg = "Qwen API request failed: Unauthorized 401, please check whether API_KEY is valid."
+                    yield self._format_response(error_msg, is_error=True)
+                    yield self._format_stop_response()
+                    return
+
+                response.raise_for_status()
+
+                for chunk in response.iter_lines():
+                    if chunk:
+                        yield f"{chunk}\n\n"
+
+        except httpx.HTTPError as e:
+            error_msg = f"Qwen API request exception: {str(e)}"
+            yield self._format_response(error_msg, is_error=True)
+            yield self._format_stop_response()
 
