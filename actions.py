@@ -107,7 +107,7 @@ class Actions():
         try:
             # Execute the command through cmd.exe
             process = subprocess.Popen(
-                [config.CMD_EXECUTOR, command] if config.CMD_EXECUTOR != 'cmd.exe' else [config.CMD_EXECUTOR, '/c', command],
+                [config.CMD_EXECUTOR, '-c', command] if config.CMD_EXECUTOR != 'cmd.exe' else [config.CMD_EXECUTOR, '/c', command],
                 stdout=subprocess.PIPE,
                 stderr=subprocess.PIPE,
                 text=True,
@@ -277,4 +277,63 @@ class Actions():
             error_msg = f"DeepSeek API request exception: {str(e)}"
             yield self._format_response(error_msg, is_error=True)
             yield self._format_stop_response()
+
+    def help(self, messages=None):
+        """Returns markdown-formatted help information about available commands"""
+        help_content = """
+# Copilot Extensions All in One - Help Guide
+
+This extension provides enhanced capabilities beyond standard GitHub Copilot. Below are the available commands and their usage:
+
+## Available Commands
+
+| Command Prefix | Description |
+|---------------|-------------|
+| `(no prefix)` | Default GitHub Copilot interaction |
+| `help` | Display this help information |
+| `cmd:` | Execute operating system commands |
+| `ollama:` | Interact with local Ollama models |
+| `qwen:` | Use Alibaba Cloud's Qwen AI model |
+| `deepseek:` | Use DeepSeek's AI model |
+
+## Examples
+
+### Default Copilot Mode
+```
+How can I implement a simple HTTP server in Python?
+```
+
+### Command Execution
+```
+cmd: dir
+cmd: python --version
+cmd: git status
+```
+
+### Ollama Interaction
+```
+ollama: Please explain the basic principles of quantum computing
+```
+
+### Qwen Interaction
+```
+qwen: Write a poem about artificial intelligence
+```
+
+### DeepSeek Interaction
+```
+deepseek: Create a detailed outline for a research paper on climate change
+```
+
+## Additional Features
+
+- **File References**: When you reference files or selected code in your message, this content is included in the request for more targeted responses.
+- **Response Streaming**: All models support streaming responses, showing AI-generated content in real-time.
+
+For more information, please refer to the [README.md](https://github.com/satomic/copilot-extension-all-in-one?tab=readme-ov-file#table-of-contents) file.
+"""
+        
+        # Format the help content for streaming
+        yield self._format_response(help_content)
+        yield self._format_stop_response()
 

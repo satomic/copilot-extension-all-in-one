@@ -4,15 +4,17 @@ This project provides extension capabilities for GitHub Copilot, enabling you to
 
 |**Version**|**Update Notes**|**Date**|
 |-|-|-|
-|1.0 | ok |20250308|
-
+|1.0 | Initial release |20250308|
+|1.1 | Added help feature & Docker support | 20250309|
 
 ## Table of contents
 - [Features](#features)
 - [Installation and Setup](#installation-and-setup)
   - [Prerequisites](#prerequisites)
   - [Installation Steps](#installation-steps)
+  - [Docker Deployment](#docker-deployment)
 - [Usage](#usage)
+  - [Help Command](#help-command)
   - [Default Mode (GitHub Copilot)](#default-mode-github-copilot)
   - [Command Execution Mode](#command-execution-mode)
   - [Ollama Mode](#ollama-mode)
@@ -35,6 +37,7 @@ This extension supports the following key features:
 3. **[Ollama Integration](https://ollama.com/)**: Connect to local Ollama models for conversations
 4. **[Alibaba Cloud Qwen Integration](https://help.aliyun.com/zh/model-studio/developer-reference/use-qwen-by-calling-api#d059267ec7867)**: Utilize Alibaba Cloud's Qwen AI model
 5. **[DeepSeek Integration](https://api-docs.deepseek.com/)**: Access DeepSeek's AI model capabilities
+6. **Help Feature**: Get instant documentation about available commands and usage instructions
 
 ![integration](images/integration.png)
 
@@ -85,9 +88,42 @@ Backend service.
     uvicorn main:app --reload
     ```
 
+### Docker Deployment
+
+You can easily deploy this application using Docker:
+
+1. Build the Docker image:
+
+```bash
+docker build -t satomic/copilot-extensions-all-in-one .
+```
+
+2. Run the container:
+
+```bash
+# With environment variables
+docker run -itd -p 8000:8000 \
+  -e QWEN_API_KEY="your_qwen_api_key" \
+  -e DEEPSEEK_API_KEY="your_deepseek_api_key" \
+  satomic/copilot-extensions-all-in-one
+```
+
+3. Access the service at `http://<the public IP of your server>:8000`, that can be called by the GitHub App you created.
+
 ## Usage
 
 The extension differentiates between features using different command prefixes:
+
+### Help Command
+
+Simply type `help` to get a quick overview of all available commands and their usage:
+
+```
+@extension-name help
+```
+![cmd-dir](images/help.png)
+
+This will display a markdown-formatted guide showing all available commands, example usages, and additional features.
 
 ### Default Mode (GitHub Copilot)
 
@@ -182,6 +218,9 @@ All models support streaming responses, allowing you to see AI-generated content
 
 4. **Q: How do I obtain a DeepSeek API Key?**  
    A: Visit the [DeepSeek API website](https://platform.deepseek.com/) to sign up for an account and obtain an API key.
+
+5. **Q: How can I see all available commands at once?**  
+   A: Simply type `help` in the chat to display a complete guide of all available commands and their usage.
 
 ## Extension Development
 

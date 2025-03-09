@@ -48,6 +48,11 @@ def stream():
                     references_selection = references_selection + reference.get("data", {}).get("content", "") + "\n\n"
 
         if last_message.get("role") == "user":
+            # Check for help command (case insensitive)
+            if content.lower() == "help":
+                logger.info("help: Showing help information")
+                return action.help(), {"Content-Type": "text/event-stream"}
+                
             # Map prefixes to action functions
             prefix_map = {
                 "cmd:": action.execute_command,
